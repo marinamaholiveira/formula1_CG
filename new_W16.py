@@ -10,27 +10,33 @@ from OpenGL.GLUT import *
 
 WIDTH, HEIGHT = 1280, 720
 
-cam_yaw = 35.0    # rotação câmera em torno de Y
-cam_pitch = 20.0  # inclinação câmera
-cam_dist = 20.0   # distância da câmera
-car_yaw = 0.0    # rotação do carro
+# Váriaveis Globais
+cam_yaw = 35.0 
+cam_pitch = 20.0  
+cam_dist = 20.0   
+car_yaw = 0.0    
 drs_open = False
-drs_angle = 0.0   # ângulo do flap DRS (0 fechado, ~20 aberto)
-wheel_spin = 0.0  # rotação das rodas para animar movimento
-drive_offset = 0.0  # deslocamento virtual da pista para simular o carro andando
-drive_vel = 0.0     # velocidade atual
-drive_max = 18.0    # velocidade máxima
-drive_accel = 12.0  # aceleração
-drive_brake = 18.0  # desaceleração (freio)
-drive_active = False  # se o carro deve acelerar (ativado pelo espaço)
+drs_angle = 0.0   
+wheel_spin = 0.0  
+drive_offset = 0.0  
+drive_vel = 0.0     
+drive_max = 18.0    
+drive_accel = 12.0  
+drive_brake = 18.0  
+drive_active = False 
 
+# Criando/Localizando as texturas com pygame
 quadric = None
 nose_tex_id = None
 tyre_tex_id = None
+logo_tex_id = None
+engine_tex_id = None
 NOSE_TEXTURE_PATH = os.path.join(os.path.dirname(__file__), "nose_texture.png")
 TYRE_TEXTURE_PATH = os.path.join(os.path.dirname(__file__), "pneu_texture.jpg")
+LOGO_TEXTURE_PATH = os.path.join(os.path.dirname(__file__), "logo_side.png")
+ENGINE_TEXTURE_PATH = os.path.join(os.path.dirname(__file__), "engine_cover_atlas.png")
 
-
+# Cores pré criadas
 def set_metal_black():
     glColor3f(0.03, 0.03, 0.04)
     glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, [0.4, 0.4, 0.4, 1.0])
@@ -41,10 +47,10 @@ def set_metal_turquoise():
     glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, [0.6, 0.9, 0.9, 1.0])
     glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 80.0)
 
-def set_rubber():
-    glColor3f(0.02, 0.02, 0.02)
-    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, [0.05, 0.05, 0.05, 1.0])
-    glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 5.0)
+def set_dark_gray():
+    glColor3f(0.22, 0.22, 0.26)
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, [0.25, 0.25, 0.25, 1.0])
+    glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 22.0)
 
 def set_carbon():
     glColor3f(0.05, 0.05, 0.06)
@@ -70,15 +76,10 @@ def load_texture(path):
     glBindTexture(GL_TEXTURE_2D, 0)
     return tex_id
 
-def set_dark_gray():
-    glColor3f(0.22, 0.22, 0.26)
-    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, [0.25, 0.25, 0.25, 1.0])
-    glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 22.0)
-
 def init_gl():
     global quadric
 
-    glClearColor(0.55, 0.75, 0.95, 1.0)  # céu azul claro
+    glClearColor(0.55, 0.75, 0.95, 1.0)
     glEnable(GL_DEPTH_TEST)
     glShadeModel(GL_SMOOTH)
 
@@ -123,7 +124,6 @@ def setup_camera():
     rad_y = math.radians(cam_yaw)
     rad_x = math.radians(cam_pitch)
 
-    # câmera acompanha o carro no eixo X (drive_offset)
     eye_x = cam_dist * math.cos(rad_x) * math.sin(rad_y) + drive_offset
     eye_y = cam_dist * math.sin(rad_x)
     eye_z = cam_dist * math.cos(rad_x) * math.cos(rad_y)
@@ -157,9 +157,8 @@ def draw_ground():
     glEnable(GL_LIGHTING)
 
 def draw_scenery():
-    """Cenário simples ao redor da pista"""
     glDisable(GL_LIGHTING)
-    # gramado/base
+    
     glColor3f(0.16, 0.24, 0.14)
     size = 200.0
     glBegin(GL_QUADS)
@@ -168,7 +167,7 @@ def draw_scenery():
     glVertex3f( size, -0.02,  size)
     glVertex3f(-size, -0.02,  size)
     glEnd()
-    # colinas simples em volta
+    
     glBegin(GL_TRIANGLES)
     glColor3f(0.20, 0.26, 0.18)
     for hx, hz in [(-60,-40),(60,-30),(-50,50),(70,60),(-70,0),(55,10)]:
@@ -176,7 +175,7 @@ def draw_scenery():
         glVertex3f(hx+30, 0.0, hz+10)
         glVertex3f(hx+12, 25.0, hz+5)
     glEnd()
-    # nuvens simples em planos altos
+    
     glColor4f(1.0, 1.0, 1.0, 0.7)
     glBegin(GL_QUADS)
     clouds = [
@@ -201,7 +200,7 @@ def pista_infinita(cx=0.0, cz=0.0):
     track_half = 8
     stripe_gap = 0.10
     stripe_w = 0.45
-    span = 500.0  # comprimento visível da pista
+    span = 500.0  
 
     x0 = cx - span * 0.5
     x1 = cx + span * 0.5
@@ -254,6 +253,7 @@ def pista_infinita(cx=0.0, cz=0.0):
 def draw_wheel():
     global quadric, tyre_tex_id
     glPushMatrix()
+    set_metal_black()
     glRotatef(180, 0, 1, 0)
     glRotatef(wheel_spin, 0, 0, 1)
 
@@ -262,19 +262,16 @@ def draw_wheel():
     rim_radius = 0.22
     rim_width = 0.20
 
-    # corpo do pneu (cilindro)
     glPushMatrix()
     use_tex = tyre_tex_id is not None
     if use_tex:
         glEnable(GL_TEXTURE_2D)
         glBindTexture(GL_TEXTURE_2D, tyre_tex_id)
-    set_rubber()
     glTranslatef(0, 0, -tyre_width * 0.5)
     gluCylinder(quadric, tyre_radius, tyre_radius, tyre_width, 64, 1)
     if use_tex:
         glBindTexture(GL_TEXTURE_2D, 0)
         glDisable(GL_TEXTURE_2D)
-    # tampas do pneu
     glNormal3f(0, 0, -1)
     glBegin(GL_TRIANGLE_FAN)
     glVertex3f(0, 0, 0)
@@ -293,7 +290,6 @@ def draw_wheel():
 
     # borda arredondada do pneu
     glPushMatrix()
-    set_rubber()
     glutSolidTorus(0.02, tyre_radius, 24, 48)
     glPopMatrix()
 
@@ -320,7 +316,7 @@ def draw_wheel():
 
     # porca central
     glPushMatrix()
-    set_metal_turquoise()
+    set_metal_black()
     glutSolidSphere(0.06, 20, 20)
     glPopMatrix()
     glPopMatrix()
@@ -328,7 +324,7 @@ def draw_wheel():
 
 def draw_front_wheels():
     x = 3.5  # roda um pouco mais à frente
-    y = -0.20
+    y = -0.10
     zoff = 1.30
 
     glPushMatrix()
@@ -343,7 +339,7 @@ def draw_front_wheels():
 
 def draw_rear_wheels():
     x = -2.6
-    y = -0.25
+    y = -0.01
     zoff = 1.5
 
     glPushMatrix()
@@ -396,6 +392,36 @@ def draw_main_body():
         glVertex3f(2.60, -0.12, 0.36 * s)
         glVertex3f(2.20, -0.08, 0.70 * s)
         glEnd()
+    draw_side_logo()
+
+def draw_side_logo():
+    global logo_tex_id
+    if logo_tex_id is None:
+        return
+    logo_w = 1.6
+    logo_h = 0.42
+    z_offset = 0.70
+    x_center = 0.60
+    y_center = 0.12
+    glColor3f(1.0, 1.0, 1.0)
+    glEnable(GL_TEXTURE_2D)
+    glBindTexture(GL_TEXTURE_2D, logo_tex_id)
+    for side in [1, -1]:
+        s = float(side)
+        u0, u1 = (0.0, 1.0) if s > 0 else (1.0, 0.0)
+        glPushMatrix()
+        glTranslatef(x_center, y_center, s * z_offset)
+        glBegin(GL_QUADS)
+        glNormal3f(0, 0, s)
+        glTexCoord2f(u0, 0.0); glVertex3f(-logo_w * 0.5, -logo_h * 0.5, 0)
+        glTexCoord2f(u1, 0.0); glVertex3f( logo_w * 0.5, -logo_h * 0.5, 0)
+        glTexCoord2f(u1, 1.0); glVertex3f( logo_w * 0.5,  logo_h * 0.5, 0)
+        glTexCoord2f(u0, 1.0); glVertex3f(-logo_w * 0.5,  logo_h * 0.5, 0)
+        glEnd()
+        glPopMatrix()
+    glBindTexture(GL_TEXTURE_2D, 0)
+    glDisable(GL_TEXTURE_2D)
+
 
 def draw_cockpit_and_halo():
     global quadric
@@ -430,11 +456,11 @@ def draw_floor_ground_effect():
         s = float(side)
 
         glBegin(GL_QUADS)
-        glVertex3f(1.8,  y, 0.35 * s)   # frente interna
-        glVertex3f(-3.0, y, 0.40 * s)   # traseira interna
+        glVertex3f(1.8,  y, 0.35 * s)   
+        glVertex3f(-3.0, y, 0.40 * s)   
 
-        glVertex3f(-2.8, y, 1.15 * s)   # traseira externa
-        glVertex3f(1.5,  y, 0.80 * s)   # frente externa
+        glVertex3f(-2.8, y, 1.15 * s)   
+        glVertex3f(1.5,  y, 0.80 * s)   
         glEnd()
 
         glBegin(GL_QUADS)
@@ -451,60 +477,105 @@ def draw_floor_ground_effect():
 
         glBegin(GL_QUADS)
         # frente borda
-        glVertex3f(0.0,   y,          1.25 * s)
-        glVertex3f(0.0,   y + altura_borda, 1.25 * s)
-        glVertex3f(-3.3,  y + altura_borda, 1.35 * s)
-        glVertex3f(-3.3,  y,          1.35 * s)
+        glVertex3f(0.0, y, 1.25 * s)
+        glVertex3f(0.0, y + altura_borda, 1.25 * s)
+        glVertex3f(-3.3, y + altura_borda, 1.35 * s)
+        glVertex3f(-3.3, y, 1.35 * s)
         glEnd()
     for side in [1, -1]:
         s = float(side)
         glBegin(GL_QUADS)
         set_metal_turquoise()
-        glVertex3f(0.8,  y,       0.80 * s)
-        glVertex3f(0.2,  y,       0.95 * s)
-        glVertex3f(0.0,  0.10,    1.00 * s)
-        glVertex3f(0.5,  0.10,    0.90 * s)
+        glVertex3f(0.8, y, 0.80 * s)
+        glVertex3f(0.2, y, 0.95 * s)
+        glVertex3f(0.0, 0.10, 1.00 * s)
+        glVertex3f(0.5, 0.10, 0.90 * s)
         glEnd()
 
 
 def draw_engine_cover_and_fin():
+    global engine_tex_id
     glPushMatrix()
-    set_metal_black()
     glTranslatef(-1.6, 0.30, 0.0)
-    front_top  = ( 1.9, 1,  0.0)
-    front_left = ( 1.9, 0.00,  0.55)
-    front_right= ( 1.9, 0.00, -0.55)
-    rear_top   = (-1.5,0.28,  0.0)
-    rear_left  = (-1.2,0.00,  0.65)
-    rear_right = (-1.2,0.00, -0.65)
+    front_top  = ( 1.9, 1, 0.0)
+    front_left = ( 1.9, 0.00, 0.55)
+    front_right= ( 1.9, 0.00,-0.55)
+    rear_top   = (-1.5,0.28, 0.0)
+    rear_left  = (-1.2,0.00, 0.65)
+    rear_right = (-1.2,0.00,-0.65)
+
+    use_tex = engine_tex_id is not None
+    if use_tex:
+        glEnable(GL_TEXTURE_2D)
+        glBindTexture(GL_TEXTURE_2D, engine_tex_id)
+        glColor3f(1.0, 1.0, 1.0)
+        x_min, x_max = -1.5, 1.9
+        z_min, z_max = -0.65, 0.65
+        def uv(x, z):
+            u = (x - x_min) / (x_max - x_min)
+            v = (z - z_min) / (z_max - z_min)
+            return u, v
+    else:
+        set_metal_black()
 
     glBegin(GL_TRIANGLES)
     # frente
-    glNormal3f(0,0.6,1); glVertex3f(*front_left); glVertex3f(*front_right); glVertex3f(*front_top)
+    glNormal3f(0,0.6,1)
+    if use_tex:
+        glTexCoord2f(*uv(*front_left[::2])); glVertex3f(*front_left)
+        glTexCoord2f(*uv(*front_right[::2])); glVertex3f(*front_right)
+        glTexCoord2f(*uv(*front_top[::2])); glVertex3f(*front_top)
+    else:
+        glVertex3f(*front_left); glVertex3f(*front_right); glVertex3f(*front_top)
     # traseira
-    glNormal3f(0,0.7,-1); glVertex3f(*rear_left); glVertex3f(*rear_top); glVertex3f(*rear_right)
+    glNormal3f(0,0.7,-1)
+    if use_tex:
+        glTexCoord2f(*uv(*rear_left[::2])); glVertex3f(*rear_left)
+        glTexCoord2f(*uv(*rear_top[::2])); glVertex3f(*rear_top)
+        glTexCoord2f(*uv(*rear_right[::2])); glVertex3f(*rear_right)
+    else:
+        glVertex3f(*rear_left); glVertex3f(*rear_top); glVertex3f(*rear_right)
     glEnd()
 
     # laterais
     glBegin(GL_QUADS)
     glNormal3f(0,-1,0)
-    glVertex3f(*front_left); glVertex3f(*front_right); glVertex3f(*rear_right); glVertex3f(*rear_left)
+    if use_tex:
+        glTexCoord2f(*uv(*front_left[::2])); glVertex3f(*front_left)
+        glTexCoord2f(*uv(*front_right[::2])); glVertex3f(*front_right)
+        glTexCoord2f(*uv(*rear_right[::2])); glVertex3f(*rear_right)
+        glTexCoord2f(*uv(*rear_left[::2])); glVertex3f(*rear_left)
+    else:
+        glVertex3f(*front_left); glVertex3f(*front_right); glVertex3f(*rear_right); glVertex3f(*rear_left)
     glNormal3f(0.2,0.1,1)
-    glVertex3f(*front_left); glVertex3f(*front_top); glVertex3f(*rear_top); glVertex3f(*rear_left)
+    if use_tex:
+        glTexCoord2f(*uv(*front_left[::2])); glVertex3f(*front_left)
+        glTexCoord2f(*uv(*front_top[::2])); glVertex3f(*front_top)
+        glTexCoord2f(*uv(*rear_top[::2])); glVertex3f(*rear_top)
+        glTexCoord2f(*uv(*rear_left[::2])); glVertex3f(*rear_left)
+    else:
+        glVertex3f(*front_left); glVertex3f(*front_top); glVertex3f(*rear_top); glVertex3f(*rear_left)
     glNormal3f(0.2,0.1,-1)
-    glVertex3f(*front_right); glVertex3f(*rear_right); glVertex3f(*rear_top); glVertex3f(*front_top)
+    if use_tex:
+        glTexCoord2f(*uv(*front_right[::2])); glVertex3f(*front_right)
+        glTexCoord2f(*uv(*rear_right[::2])); glVertex3f(*rear_right)
+        glTexCoord2f(*uv(*rear_top[::2])); glVertex3f(*rear_top)
+        glTexCoord2f(*uv(*front_top[::2])); glVertex3f(*front_top)
+    else:
+        glVertex3f(*front_right); glVertex3f(*rear_right); glVertex3f(*rear_top); glVertex3f(*front_top)
     glEnd()
+    if use_tex:
+        glBindTexture(GL_TEXTURE_2D, 0)
+        glDisable(GL_TEXTURE_2D)
     glPopMatrix()
 
-    # exaustor pequeno no topo traseiro da cunha
     glPushMatrix()
-    set_carbon()
+    set_dark_gray()
     glTranslatef(0.12, 1.2, 0.0)
     glScalef(0.20, 0.14, 0.24)
     glutSolidCube(2.0)
     glPopMatrix()
 
-    # barbatana
     glPushMatrix()
     set_carbon()
     glTranslatef(-2.7, 1.0, 0.0)
@@ -634,7 +705,6 @@ def draw_front_wing_detailed():
     glTexCoord2f(1.0,1.0); glVertex3f(x, top_y,  w)
     glTexCoord2f(0.0,1.0); glVertex3f(x, top_y, -w)
     glEnd()
-    # transição + ponta do nariz (sem textura)
     x, top_y, bot_y, w = slices[-1]
     tip_x = x + 0.22
     tip_w = w * 0.22
@@ -643,7 +713,7 @@ def draw_front_wing_detailed():
     if use_tex:
         glBindTexture(GL_TEXTURE_2D, 0)
         glDisable(GL_TEXTURE_2D)
-    set_dark_gray()
+    set_metal_black()
 
     glBegin(GL_QUADS)
     # topo
@@ -793,7 +863,6 @@ def draw_rear_wing_detailed():
     glutSolidCube(1.0)
     glPopMatrix()
 
-
 def draw_exhaust():
     global quadric
     glPushMatrix()
@@ -808,7 +877,6 @@ def draw_exhaust():
 def main_carro():
     glPushMatrix()
     glTranslatef(0.0, 0.80, 0.0)
-
     draw_main_body()
     glPushMatrix()
     glTranslatef(0.40, 0.0, 0.0)
@@ -955,9 +1023,11 @@ def main():
     glutInit(sys.argv)
 
     init_gl()
-    global nose_tex_id, tyre_tex_id
+    global nose_tex_id, tyre_tex_id, logo_tex_id, engine_tex_id
     nose_tex_id = load_texture(NOSE_TEXTURE_PATH)
     tyre_tex_id = load_texture(TYRE_TEXTURE_PATH)
+    logo_tex_id = load_texture(LOGO_TEXTURE_PATH)
+    engine_tex_id = load_texture(ENGINE_TEXTURE_PATH)
 
     clock = pygame.time.Clock()
     while True:
