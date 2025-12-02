@@ -8,20 +8,26 @@ Simulação simples de um carro de F1 (Mercedes W16) renderizado em OpenGL via P
 - Aceleração 3D disponível (GPU/driver OpenGL)
 - (WSL/Linux) Servidor gráfico ativo (`$DISPLAY` definido) e biblioteca SDL disponível
 
-## Instalação rápida
-```bash
-# dentro da pasta do projeto
-python3 -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install --upgrade pip
-pip install pygame PyOpenGL PyOpenGL_accelerate
-```
+## Instalação (Windows)
+1. Instale o Python 3.10+ pelo [python.org](https://www.python.org/downloads/) marcando a opção “Add Python to PATH”.
+2. No prompt (ou PowerShell), dentro da pasta do projeto:
+   ```powershell
+   py -3 -m venv .venv
+   .venv\Scripts\activate
+   python -m pip install --upgrade pip
+   python -m pip install pygame PyOpenGL PyOpenGL_accelerate
+   ```
+   Se ocorrer “access violation” ao abrir a janela, teste removendo o acelerador:
+   ```powershell
+   python -m pip uninstall -y PyOpenGL_accelerate
+   ```
+3. Rodar o app:
+   ```powershell
+   python new_W16.py
+   ```
 
-## Rodando
-```bash
-python3 new_W16.py
-```
-Se usar WSL, abra um terminal com um servidor X rodando (VcXsrv/Xming) e certifique-se de que `DISPLAY` está configurada.
+### Observação (WSL)
+Requer servidor X (VcXsrv/Xming) ativo e variável `DISPLAY` setada.
 
 ## Controles
 - `Espaço`: acelerar/retomar

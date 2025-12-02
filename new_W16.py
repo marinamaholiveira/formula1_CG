@@ -6,7 +6,6 @@ from pygame.locals import *
 
 from OpenGL.GL import *
 from OpenGL.GLU import *
-from OpenGL.GLUT import *
 
 WIDTH, HEIGHT = 1280, 720
 
@@ -31,6 +30,7 @@ nose_tex_id = None
 tyre_tex_id = None
 logo_tex_id = None
 engine_tex_id = None
+hud_font = None
 NOSE_TEXTURE_PATH = os.path.join(os.path.dirname(__file__), "nose_texture.png")
 TYRE_TEXTURE_PATH = os.path.join(os.path.dirname(__file__), "pneu_texture.jpg")
 LOGO_TEXTURE_PATH = os.path.join(os.path.dirname(__file__), "logo_side.png")
@@ -75,6 +75,72 @@ def load_texture(path):
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data)
     glBindTexture(GL_TEXTURE_2D, 0)
     return tex_id
+
+def draw_cube(size):
+    """Cubo sólido sem GLUT."""
+    hs = size * 0.5
+    glBegin(GL_QUADS)
+    # +X
+    glNormal3f(1, 0, 0)
+    glVertex3f(hs, -hs, -hs); glVertex3f(hs, hs, -hs); glVertex3f(hs, hs, hs); glVertex3f(hs, -hs, hs)
+    # -X
+    glNormal3f(-1, 0, 0)
+    glVertex3f(-hs, -hs, hs); glVertex3f(-hs, hs, hs); glVertex3f(-hs, hs, -hs); glVertex3f(-hs, -hs, -hs)
+    # +Y
+    glNormal3f(0, 1, 0)
+    glVertex3f(-hs, hs, -hs); glVertex3f(hs, hs, -hs); glVertex3f(hs, hs, hs); glVertex3f(-hs, hs, hs)
+    # -Y
+    glNormal3f(0, -1, 0)
+    glVertex3f(-hs, -hs, hs); glVertex3f(hs, -hs, hs); glVertex3f(hs, -hs, -hs); glVertex3f(-hs, -hs, -hs)
+    # +Z
+    glNormal3f(0, 0, 1)
+    glVertex3f(-hs, -hs, hs); glVertex3f(-hs, hs, hs); glVertex3f(hs, hs, hs); glVertex3f(hs, -hs, hs)
+    # -Z
+    glNormal3f(0, 0, -1)
+    glVertex3f(hs, -hs, -hs); glVertex3f(hs, hs, -hs); glVertex3f(-hs, hs, -hs); glVertex3f(-hs, -hs, -hs)
+    glEnd()
+
+def draw_sphere(radius, slices=20, stacks=20):
+    gluSphere(quadric, radius, slices, stacks)
+
+def draw_torus(inner, outer, sides=24, rings=48):
+    r = inner
+    R = outer
+    for i in range(rings):
+        theta = 2 * math.pi * i / rings
+        theta_n = 2 * math.pi * (i + 1) / rings
+        glBegin(GL_QUAD_STRIP)
+        for j in range(sides + 1):
+            phi = 2 * math.pi * j / sides
+            cos_p, sin_p = math.cos(phi), math.sin(phi)
+            for th in (theta, theta_n):
+                cos_t, sin_t = math.cos(th), math.sin(th)
+                x = (R + r * cos_p) * cos_t
+                y = r * sin_p
+                z = (R + r * cos_p) * sin_t
+                nx = cos_p * cos_t
+                ny = sin_p
+                nz = cos_p * sin_t
+                glNormal3f(nx, ny, nz)
+                glVertex3f(x, y, z)
+        glEnd()
+
+def draw_text(x, y, text, color=(0.85, 0.95, 1.0)):
+    """Desenha texto 2D na HUD sem GLUT, usando pygame para rasterizar."""
+    global hud_font
+    if hud_font is None:
+        pygame.font.init()
+        hud_font = pygame.font.Font(None, 18)
+    surf = hud_font.render(text, True, tuple(int(c * 255) for c in color[:3]))
+    data = pygame.image.tostring(surf, "RGBA", True)
+    w, h = surf.get_size()
+    glEnable(GL_BLEND)
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+    glPixelZoom(1, -1)  # vira para alinhar com ortho (y crescente para baixo)
+    glRasterPos2f(x, y)  # posição do topo
+    glDrawPixels(w, h, GL_RGBA, GL_UNSIGNED_BYTE, data)
+    glPixelZoom(1, 1)
 
 def init_gl():
     global quadric
@@ -288,11 +354,6 @@ def draw_wheel():
     glEnd()
     glPopMatrix()
 
-    # borda arredondada do pneu
-    glPushMatrix()
-    glutSolidTorus(0.02, tyre_radius, 24, 48)
-    glPopMatrix()
-
     # aro
     glPushMatrix()
     glTranslatef(0, 0, -rim_width * 0.5)
@@ -317,7 +378,7 @@ def draw_wheel():
     # porca central
     glPushMatrix()
     set_metal_black()
-    glutSolidSphere(0.06, 20, 20)
+    draw_sphere(0.06, 20, 20)
     glPopMatrix()
     glPopMatrix()
 
@@ -381,7 +442,7 @@ def draw_main_body():
     set_metal_black()
     glTranslatef(-0.52, 0.0, 0.0)  
     glScalef(4.6, 0.6, 1.25)     
-    glutSolidCube(1.0)
+    draw_cube(1.0)
     glPopMatrix()
     set_carbon()
     for side in [1, -1]:
@@ -429,9 +490,9 @@ def draw_cockpit_and_halo():
     glPushMatrix()
     set_carbon()
     glTranslatef(-0.0, 0.70, 0.0)
-    glRotatef(90, 1, 0, 0)
+    glRotatef(180, 1, 0, 0)
     glScalef(1.25, 1.0, 0.88)
-    glutSolidTorus(0.06, 0.52, 32, 52)
+    draw_torus(0.06, 0.52, 32, 52)
     glPopMatrix()
     glPushMatrix()
     set_carbon()
@@ -573,14 +634,14 @@ def draw_engine_cover_and_fin():
     set_dark_gray()
     glTranslatef(0.12, 1.2, 0.0)
     glScalef(0.20, 0.14, 0.24)
-    glutSolidCube(2.0)
+    draw_cube(2.0)
     glPopMatrix()
 
     glPushMatrix()
     set_carbon()
     glTranslatef(-2.7, 1.0, 0.0)
     glScalef(1.8, 0.7, 0.05)
-    glutSolidCube(1.0)
+    draw_cube(1.0)
     glPopMatrix()
 
 def draw_endplate_shape():
@@ -836,7 +897,7 @@ def draw_rear_wing_detailed():
         glTranslatef(-2.80, 0.50, side * 0.90)
         glRotatef(90,0,1,0)
         glScalef(0.12, 1.80, 0.70)
-        glutSolidCube(1.0)
+        draw_cube(1.0)
         glPopMatrix()
 
     for side in [0.2, -0.2]:
@@ -844,14 +905,14 @@ def draw_rear_wing_detailed():
         set_carbon()
         glTranslatef(-3.20, 0.72, side)
         glScalef(0.10, 1, 0.14)
-        glutSolidCube(1.0)
+        draw_cube(1.0)
         glPopMatrix()
 
     glPushMatrix()
     set_carbon()
     glTranslatef(-2.90, 1.2, 0.0)
     glScalef(0.80, 0 , 1.68)
-    glutSolidCube(1.0)
+    draw_cube(1.0)
     glPopMatrix()
 
     glPushMatrix()
@@ -860,7 +921,7 @@ def draw_rear_wing_detailed():
     glRotatef(drs_angle, 0, 0, 1)   # abertura
     glTranslatef(0.06, 0.04, 0.0)   # desloca corpo após rotação
     glScalef(0.50, 0.0, 1.68)
-    glutSolidCube(1.0)
+    draw_cube(1.0)
     glPopMatrix()
 
 def draw_exhaust():
@@ -1001,11 +1062,10 @@ def draw_hud():
         "Esc: sair"
     ]
     y = 30
+    glDisable(GL_TEXTURE_2D)
     for line in lines:
-        glRasterPos2f(20, y)
-        for ch in line:
-            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, ord(ch))
-        y += 16
+        draw_text(20, y, line)
+        y += 18
 
     glEnable(GL_DEPTH_TEST)
     glEnable(GL_LIGHTING)
@@ -1019,8 +1079,6 @@ def main():
     pygame.init()
     pygame.display.set_mode((WIDTH, HEIGHT), DOUBLEBUF | OPENGL | RESIZABLE)
     pygame.display.set_caption("Mercedes F1 - W16")
-
-    glutInit(sys.argv)
 
     init_gl()
     global nose_tex_id, tyre_tex_id, logo_tex_id, engine_tex_id
