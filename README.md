@@ -8,6 +8,7 @@ Simulação simples de um carro de F1 (Mercedes W16) renderizado em OpenGL via P
 - Aceleração 3D disponível (GPU/driver OpenGL)
 - (WSL/Linux) Servidor gráfico ativo (`$DISPLAY` definido) e biblioteca SDL disponível
 
+<<<<<<< HEAD
 ## Instalação (Windows)
 1. Instale o Python 3.10+ pelo [python.org](https://www.python.org/downloads/) marcando a opção “Add Python to PATH”.
 2. No prompt (ou PowerShell), dentro da pasta do projeto:
@@ -25,6 +26,16 @@ Simulação simples de um carro de F1 (Mercedes W16) renderizado em OpenGL via P
    ```powershell
    python new_W16.py
    ```
+=======
+## Instalação rápida
+```bash
+# dentro da pasta do projeto
+python3 -m venv .venv
+Windows: .venv\Scripts\activate
+pip install --upgrade pip
+pip install pygame PyOpenGL PyOpenGL_accelerate
+```
+>>>>>>> 4de986fd18d3edcfce442cd9f71835909fdbdb08
 
 ### Observação (WSL)
 Requer servidor X (VcXsrv/Xming) ativo e variável `DISPLAY` setada.
