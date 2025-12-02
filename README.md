@@ -12,7 +12,7 @@ Simulação simples de um carro de F1 (Mercedes W16) renderizado em OpenGL via P
 ```bash
 # dentro da pasta do projeto
 python3 -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+Windows: .venv\Scripts\activate
 pip install --upgrade pip
 pip install pygame PyOpenGL PyOpenGL_accelerate
 ```
