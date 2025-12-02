@@ -23,6 +23,7 @@ drive_max = 18.0
 drive_accel = 12.0  
 drive_brake = 18.0  
 drive_active = False 
+show_hud = True
 
 # Criando/Localizando as texturas com pygame
 quadric = None
@@ -126,7 +127,6 @@ def draw_torus(inner, outer, sides=24, rings=48):
         glEnd()
 
 def draw_text(x, y, text, color=(0.85, 0.95, 1.0)):
-    """Desenha texto 2D na HUD sem GLUT, usando pygame para rasterizar."""
     global hud_font
     if hud_font is None:
         pygame.font.init()
@@ -137,8 +137,8 @@ def draw_text(x, y, text, color=(0.85, 0.95, 1.0)):
     glEnable(GL_BLEND)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
-    glPixelZoom(1, -1)  # vira para alinhar com ortho (y crescente para baixo)
-    glRasterPos2f(x, y)  # posição do topo
+    glPixelZoom(1, 1)  # inverte verticalmente no desenho
+    glRasterPos2f(x, y + h)  # posiciona pelo topo
     glDrawPixels(w, h, GL_RGBA, GL_UNSIGNED_BYTE, data)
     glPixelZoom(1, 1)
 
@@ -996,7 +996,7 @@ def draw_scene():
 
 
 def handle_input():
-    global cam_yaw, cam_pitch, cam_dist, drs_open, drive_active
+    global cam_yaw, cam_pitch, cam_dist, drs_open, drive_active, show_hud
 
     for event in pygame.event.get():
         if event.type == QUIT:
@@ -1007,6 +1007,7 @@ def handle_input():
             reshape(event.w, event.h)
 
         if event.type == KEYDOWN:
+            show_hud = False
             if event.key == K_ESCAPE:
                 pygame.quit()
                 sys.exit()
@@ -1033,6 +1034,9 @@ def handle_input():
 
 
 def draw_hud():
+    if not show_hud:
+        return
+
     glMatrixMode(GL_PROJECTION)
     glPushMatrix()
     glLoadIdentity()
@@ -1043,29 +1047,45 @@ def draw_hud():
     glDisable(GL_LIGHTING)
     glDisable(GL_DEPTH_TEST)
 
-    glColor3f(0.1, 0.1, 0.1)
-    glBegin(GL_QUADS)
-    glVertex2f(10, 10)
-    glVertex2f(330, 10)
-    glVertex2f(330, 120)
-    glVertex2f(10, 120)
-    glEnd()
-
-    glColor3f(0.85, 0.95, 1.0)
     lines = [
-        "Controles:",
+        "Controles",
         "Espaço: acelerar/retomar",
         "Ctrl: frear",
         "D: abre/fecha DRS",
         "Setas / W,S: mover camera",
         "Esquerda/Direita: girar camera",
-        "Esc: sair"
+        "Esc: sair",
+        "(Pressione qualquer tecla para ocultar)"
     ]
-    y = 30
+    # prepara fonte para medir tamanhos
+    if hud_font is None:
+        pygame.font.init()
+        _ = pygame.font.Font(None, 18)
+    line_h = pygame.font.Font(None, 18).get_linesize()
+    max_w = max(pygame.font.Font(None, 18).size(l)[0] for l in lines)
+    total_h = line_h * len(lines)
+    pad = 14
+    box_w = max_w + pad * 2
+    box_h = total_h + pad * 2
+    cx = WIDTH * 0.5
+    cy = HEIGHT * 0.5
+    x0 = cx - box_w * 0.5
+    y0 = cy - box_h * 0.5
+
+    glColor4f(0.05, 0.05, 0.05, 0.8)
+    glBegin(GL_QUADS)
+    glVertex2f(x0, y0)
+    glVertex2f(x0 + box_w, y0)
+    glVertex2f(x0 + box_w, y0 + box_h)
+    glVertex2f(x0, y0 + box_h)
+    glEnd()
+
+    glColor3f(0.85, 0.95, 1.0)
     glDisable(GL_TEXTURE_2D)
+    y = y0 + pad
     for line in lines:
-        draw_text(20, y, line)
-        y += 18
+        draw_text(cx - max_w * 0.5, y, line)
+        y += line_h
 
     glEnable(GL_DEPTH_TEST)
     glEnable(GL_LIGHTING)
