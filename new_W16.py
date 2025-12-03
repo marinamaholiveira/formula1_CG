@@ -190,10 +190,10 @@ def setup_camera():
     rad_y = math.radians(cam_yaw)
     rad_x = math.radians(cam_pitch)
 
-    eye_x = cam_dist * math.cos(rad_x) * math.sin(rad_y) + drive_offset
+    eye_x = cam_dist * math.cos(rad_x) * math.sin(rad_y)
     eye_y = cam_dist * math.sin(rad_x)
     eye_z = cam_dist * math.cos(rad_x) * math.cos(rad_y)
-    center_x = drive_offset
+    center_x = 0.0
 
     gluLookAt(
         eye_x, eye_y, eye_z,
@@ -263,13 +263,17 @@ def draw_scenery():
 
 def pista_infinita(cx=0.0, cz=0.0):
     glDisable(GL_LIGHTING)
+    glPushMatrix()
+    glTranslatef(-cx, 0.0, -cz)
     track_half = 8
     stripe_gap = 0.10
     stripe_w = 0.45
-    span = 500.0  
+    span = 2000.0  # área visível (grande o suficiente para não ver bordas)
+    seg = 3.0     # comprimento de zebra
 
-    x0 = cx - span * 0.5
-    x1 = cx + span * 0.5
+    offset = math.fmod(cx, seg)
+    x0 = -span * 0.5 - offset
+    x1 = span * 0.5 - offset
 
     # asfalto
     glColor3f(0.10, 0.10, 0.12)
@@ -281,12 +285,13 @@ def pista_infinita(cx=0.0, cz=0.0):
     glEnd()
 
     # zebras
-    stripes = int(span // 3)
-    seg = span / stripes
+    stripes = int(span // seg) + 2
+    base_idx = int(math.floor((cx - span * 0.5) / seg))
     for i in range(stripes):
         sx0 = x0 + i * seg
         sx1 = sx0 + seg
-        is_red = (i & 1) == 0
+        stripe_idx = base_idx + i
+        is_red = (stripe_idx & 1) == 0
         color = (0.85, 0.05, 0.05) if is_red else (0.95, 0.95, 0.95)
         glColor3f(*color)
         glBegin(GL_QUADS)
@@ -314,6 +319,7 @@ def pista_infinita(cx=0.0, cz=0.0):
     glVertex3f(x1, 0.0, -margin)
     glVertex3f(x0, 0.0, -margin)
     glEnd()
+    glPopMatrix()
     glEnable(GL_LIGHTING)
 
 def draw_wheel():
@@ -352,6 +358,39 @@ def draw_wheel():
         a = 2 * math.pi * i / 32
         glVertex3f(math.cos(a) * tyre_radius, math.sin(a) * tyre_radius, tyre_width)
     glEnd()
+    # arcos amarelos nas duas laterais
+    glColor3f(1.0, 0.9, 0.2)
+    ring_steps = 64
+    r_out = tyre_radius * 0.85
+    r_in = tyre_radius * 0.75
+    for z_side in (-0.001, tyre_width + 0.001):
+        glBegin(GL_TRIANGLE_STRIP)
+        for i in range(ring_steps + 1):
+            a = 2 * math.pi * i / ring_steps
+            ca, sa = math.cos(a), math.sin(a)
+            glVertex3f(ca * r_out, sa * r_out, z_side)
+            glVertex3f(ca * r_in, sa * r_in, z_side)
+        glEnd()
+        # círculo pequeno no centro
+        glBegin(GL_TRIANGLE_FAN)
+        center_r = rim_radius * 0.65
+        glVertex3f(0, 0, z_side)
+        for i in range(33):
+            a = 2 * math.pi * i / 32
+            glVertex3f(math.cos(a) * center_r, math.sin(a) * center_r, z_side)
+        glEnd()
+        # três triângulos estilo estrela ligados ao centro
+        tri_r = rim_radius * 0.75
+        span = math.radians(18)
+        for k in range(3):
+            base_angle = 2 * math.pi * k / 3
+            a0 = base_angle - span
+            a1 = base_angle + span
+            glBegin(GL_TRIANGLES)
+            glVertex3f(0, 0, z_side)
+            glVertex3f(math.cos(a0) * tri_r, math.sin(a0) * tri_r, z_side)
+            glVertex3f(math.cos(a1) * tri_r, math.sin(a1) * tri_r, z_side)
+            glEnd()
     glPopMatrix()
 
     # aro
@@ -986,7 +1025,6 @@ def draw_scene():
     pista_infinita(drive_offset, 0.0)
 
     glPushMatrix()
-    glTranslatef(drive_offset, 0.0, 0.0)  
     glRotatef(car_yaw, 0.0, 1.0, 0.0)
     main_carro()
     glPopMatrix()
