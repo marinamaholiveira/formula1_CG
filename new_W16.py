@@ -268,12 +268,12 @@ def pista_infinita(cx=0.0, cz=0.0):
     track_half = 8
     stripe_gap = 0.10
     stripe_w = 0.45
-    span = 2000.0  # área visível (grande o suficiente para não ver bordas)
     seg = 3.0     # comprimento de zebra
-
-    offset = math.fmod(cx, seg)
-    x0 = -span * 0.5 - offset
-    x1 = span * 0.5 - offset
+    stripes_vis = 600  # quantidade fixa de segmentos desenhados
+    half = stripes_vis // 2
+    start_idx = int(math.floor(cx / seg)) - half
+    x0 = start_idx * seg
+    x1 = (start_idx + stripes_vis) * seg
 
     # asfalto
     glColor3f(0.10, 0.10, 0.12)
@@ -285,12 +285,10 @@ def pista_infinita(cx=0.0, cz=0.0):
     glEnd()
 
     # zebras
-    stripes = int(span // seg) + 2
-    base_idx = int(math.floor((cx - span * 0.5) / seg))
-    for i in range(stripes):
+    for i in range(stripes_vis):
         sx0 = x0 + i * seg
         sx1 = sx0 + seg
-        stripe_idx = base_idx + i
+        stripe_idx = start_idx + i
         is_red = (stripe_idx & 1) == 0
         color = (0.85, 0.05, 0.05) if is_red else (0.95, 0.95, 0.95)
         glColor3f(*color)
